@@ -87,7 +87,6 @@ export default function(G6) {
     drawShape(cfg, group) {
       const shapeType = this.shapeType
       const style = this.getShapeStyle(cfg)
-      debugger
       const shape = group.addShape(shapeType, {
         attrs: {
           ...style

@@ -45,7 +45,29 @@ export default function(G6) {
     onMouseUp(e) {
       if (this.graph.get('onDragAddNode')) {
         const p = this.graph.getPointByClient(e.clientX, e.clientY)
-        if (p.x > 0 && p.y > 0) { this._addNode(p) }
+        this._addNode(p)
+        const width = this.graph.get('width')
+        const height = this.graph.get('height')
+        let widthFactor = 1
+        let heightFactor = 1
+        if (p.x > 0 && p.x < width && p.y > 0 && p.y < height) {
+          return
+        }
+        if (p.x < 0) {
+          widthFactor = (width - p.x) / width
+        } else if (p.x > width) {
+          widthFactor = p.x / width
+        }
+
+        if (p.y < 0) {
+          heightFactor = (height - p.y) / height
+        } else if (p.y > height) {
+          heightFactor = p.y / height
+        }
+        // const zoomFactor = widthFactor > heightFactor ? widthFactor : heightFactor
+        // debugger
+        // this.graph.changeSize(width * zoomFactor, height * zoomFactor)
+        // this.graph.paint()
       }
     },
     onMouseLeave(e) {
@@ -71,15 +93,20 @@ export default function(G6) {
         const id = addModel.lableName + timestamp
         const x = p.x
         const y = p.y
-        this.graph.add('node', {
+        var addNode = this.graph.add('node', {
           x: x,
           y: y,
           id: id,
           ...editorStyle.nodeStyle,
           label: addModel.lableName,
           shape: 'process-route',
-          testcfg: 'tt'
+          testcfg: 'tt',
+          nodeObjData: {}
         })
+        const kk = addNode.getModel()
+        this.graph.emit('afterItemAdd', {})
+        // 新增节点
+        addNode.set('nodeStatus', 'add')
       }
     }
   })

@@ -16,25 +16,19 @@ export default function(G6) {
       }
     },
     onClick(e) {
-      // 获取节点表格数据，触发外部事件
-      e.item.set('detailInfo', {
-        tableData: [],
-        name: 'cs'
-      })
+      // 触发 afteritemselected 事件，传递节点id
       this._clearSelected()
       this.graph.setItemState(e.item, 'selected', true)
       let selectedItems = this.graph.get('selectedItems')
       if (!selectedItems) { selectedItems = [] }
-      selectedItems = [e.item.get('detailInfo')]
-      debugger
+      selectedItems = [e.item.get('id')]
       this.graph.set('selectedItems', selectedItems)
-      this.graph.emit('afteritemselected', selectedItems)
+      this.graph.emit('afterItemSelected', selectedItems)
     },
     onNodeMouseOver(e) {
       // if (this.graph.getCurrentMode() === 'edit') { this.graph.setItemState(e.item, 'hover', true) } else { this.graph.setItemState(e.item, 'hover', false) }
     },
     onEdgeMouseOver(e) {
-      debugger
       const h = this.graph.getCurrentMode()
       if (this.graph.getCurrentMode() === 'edit' && !e.item.hasState('selected')) { this.graph.setItemState(e.item, 'hover', true) }
     },
@@ -54,7 +48,7 @@ export default function(G6) {
         this.graph.setItemState(edge, 'selected', false)
       })
       this.graph.set('selectedItems', [])
-      this.graph.emit('afteritemselected', [])
+      this.graph.emit('afterItemSelected', [])
     }
   })
 }

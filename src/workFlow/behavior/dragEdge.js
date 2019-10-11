@@ -50,7 +50,6 @@ export default function(G6) {
         sourceNode: node,
         sourceAnchor: anchorIndex
       }
-      debugger
       this.dragEdgeBeforeShowAnchor(e)
       this.graph.set('onDragEdge', true)
     },
@@ -84,11 +83,9 @@ export default function(G6) {
           node.getModel().clazz === 'timerStartEvent' ||
           node.getModel().clazz === 'messageStartEvent') { return }
         const group = node.getContainer()
-        debugger
         group.showAnchor(group)
         group.anchorShapes.forEach(a => a.get('item').showHotpot())
       })
-      debugger
     },
     _updateEdge(item, e, force) {
       const x = e.x
@@ -137,7 +134,6 @@ export default function(G6) {
           targetAnchor: this.origin.targetAnchor,
           shape: 'flow-polyline-round'
         }
-        debugger
         if (this.graph.executeCommand) {
           this.graph.executeCommand('add', {
             type: 'edge',
