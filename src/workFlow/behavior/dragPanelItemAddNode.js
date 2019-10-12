@@ -43,8 +43,10 @@ export default function(G6) {
       }
     },
     onMouseUp(e) {
+      console.log('canvas:mouseup')
       if (this.graph.get('onDragAddNode')) {
         const p = this.graph.getPointByClient(e.clientX, e.clientY)
+        debugger
         this._addNode(p)
         const width = this.graph.get('width')
         const height = this.graph.get('height')

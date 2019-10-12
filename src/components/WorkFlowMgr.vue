@@ -1,42 +1,43 @@
 <template>
   <div>
     <el-container>
-      <el-header height="50px">
-        <el-row><el-tag>标签一</el-tag></el-row>
-      </el-header>
       <el-container>
-        <el-aside width="12%">
+        <el-aside width="10%">
           <el-input v-model="productCategory.filterText" placeholder="输入关键字进行过滤" />
           <el-tree
             ref="tree"
+            node-key="id"
             class="filter-tree"
             :data="productCategory.data"
             :props="productCategory.defaultProps"
             :filter-node-method="filterNode"
             accordion
             :expand-on-click-node="true"
-            :indent="5"
+            :indent="2"
+            :highlight-current="true"
+            style="font-size: 14px;"
             @node-click="handleNodeClick"
           >
             <span slot-scope="{ node, data }" class="custom-tree-node">
-              <div>
+              <div style="width:100%">
                 <span style="margin:3px">{{ node.label }}</span>
                 <template v-if="node.level === 2">
+                  <el-divider direction="vertical" />
                   <el-tooltip class="item" effect="dark" content="新建加工路径" placement="right-start">
-                    <el-button size="mini" icon="el-icon-plus" style="margin-left:165%" circle @click.stop="() => addTreeNode(data)" />
+                    <el-button size="mini" icon="el-icon-plus" circle @click.stop="() => addGraph(data)" />
                   </el-tooltip>
 
                 </template>
-                <template v-if="node.level === 3">
 
-                  <el-button-group>
-                    <el-tooltip class="item" effect="dark" content="重命名" placement="right-start">
-                      <el-button size="mini" icon="el-icon-edit" circle @click.stop="() => reNameTreeNode(data)" />
-                    </el-tooltip>
-                    <el-tooltip class="item" effect="dark" content="删除加工路径" placement="right-start">
-                      <el-button size="mini" icon="el-icon-delete" circle @click.stop="() => delTreeNode(data)" />
-                    </el-tooltip>
-                  </el-button-group>
+                <template v-if="node.level === 3">
+                  <template v-if="data.status==='Modified'">
+                    <el-divider direction="vertical" />
+                    <span style="color:#FF9800;">M</span>
+                  </template>
+                  <template v-else-if="data.status==='Added'">
+                    <el-divider direction="vertical" />
+                    <span style="color:#009688;">A</span>
+                  </template>
 
                 </template>
               </div>
@@ -44,9 +45,9 @@
             </span>
           </el-tree>
         </el-aside>
-        <el-aside width="10%">
+        <el-aside width="8%">
           <el-collapse accordion>
-            <el-collapse-item v-for="(procType) in procSteps" :key="procType.id">
+            <el-collapse-item v-for="(procType) in nodeComponents" :key="procType.id">
               <template slot="title">
                 <i class="header-icon el-icon-info" style="padding-left:20px" />
                 <p style="padding-left:10px">{{ procType.typeName }}</p>
@@ -66,44 +67,90 @@
         <el-main>
           <el-container>
             <el-main>
-              <div id="workFlowPanel" ref="workFlowContainer" />
+              <el-card shadow="hover" body-style="padding:10px">
+                <el-row>
+                  <el-col :span="11">
+                    <div class="graph-status">
+                      <span>状态：</span><span style="font-weight: bolder;color: #409EFF;">生效</span><span style="font-weight: bolder;color: #F56C6C;">失效</span>
+                      <el-divider direction="vertical" />
+                      <span>编号：{{ graphId }}</span>
+                      <el-divider direction="vertical" />
+                      <span>名称：{{ graphName }}</span>
+                      <el-divider direction="vertical" />
+                      <span>模式：{{ graphMode }}</span>
+                      <el-divider direction="vertical" />
+                      <el-tooltip class="item" effect="dark" content="切换模式" placement="bottom">
+                        <el-switch v-model="currGraph.editMode" :width="30" :disabled="canChangeMode" @change="(val)=>changeGraphMode(val)" />
+                      </el-tooltip>
+
+                    </div>
+                  </el-col>
+                  <el-col :span="13">
+                    <el-divider direction="vertical" />
+                    <el-tooltip class="item" effect="dark" content="删除元素" placement="bottom">
+                      <el-button size="medium" type="plain" class="el-icon-delete tool-panel-button" :disabled="canDelItem" @click="graphDelItem()" />
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="放大" placement="bottom">
+                      <el-button size="medium" type="plain" class="el-icon-zoom-in tool-panel-button" :disabled="canChangeMode" @click="zoomIn()" />
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="缩小" placement="bottom">
+                      <el-button size="medium" type="plain" class="el-icon-zoom-out tool-panel-button" :disabled="canChangeMode" @click="zoomOut()" />
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="适应屏幕" placement="bottom">
+                      <el-button size="medium" type="plain" class="el-icon-full-screen tool-panel-button" :disabled="canChangeMode" @click="fitScreen()" />
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="切换网格" placement="bottom">
+                      <el-button size="medium" type="plain" class="el-icon-s-grid tool-panel-button" @click="setGrid()" />
+                    </el-tooltip>
+                    <el-divider direction="vertical" />
+                    <el-tooltip class="item" effect="dark" content="重命名加工路径名称" placement="bottom">
+                      <el-button size="mini" type="warning" :disabled="!currGraph.editMode" @click.stop="() => reNameGraph()">重命名</el-button>
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="失效本条加工路径！" placement="bottom">
+                      <el-button size="mini" type="danger" :disabled="!currGraph.editMode" @click="drafGraph()">失效</el-button>
+                    </el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="删除本条加工路径，且无法撤回！" placement="bottom">
+                      <el-button size="mini" type="danger" :disabled="!currGraph.editMode" @click="delGraph()">删除</el-button>
+                    </el-tooltip>
+                    <el-button size="mini" type="primary" icon="el-icon-upload" :disabled="!currGraph.editMode" @click="saveGraph()">提交</el-button>
+                  </el-col>
+                </el-row>
+
+              </el-card>
+
+              <div @dragover.prevent @drop="nodeDropHandler($event)">
+                <el-card :style="gridStyle" body-style="padding:0px">
+                  <div id="workFlowPanel" ref="workFlowContainer" />
+                </el-card>
+
+              </div>
+
             </el-main>
-            <el-aside width="20%" class="panel-detail">
+            <el-aside width="30%" class="panel-detail">
               <el-row>
                 <div id="workFlowMiniMap" ref="miniMapContainer" />
               </el-row>
               <el-row>
-                <el-table
-                  :data="selectedNodeObjData.tableData"
-                  style="width: 100%"
-                >
-                  <el-table-column
-                    label="Date"
-                    prop="date"
-                  />
-                  <el-table-column
-                    label="Name"
-                    prop="name"
-                  />
-                  <el-table-column
-                    align="right"
-                  >
-                    <template slot="header" slot-scope="scope">
-                      <el-button
-                        size="mini"
-                        type="danger"
-                        @click="addTableRow(scope)"
-                      >Delete</el-button>
-                    </template>
-                    <template slot-scope="scope">
-                      <el-button
-                        size="mini"
-                        type="danger"
-                        @click="delTableRow(scope.$index, scope.row)"
-                      >Delete</el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
+                <el-card class="box-card">
+                  <div slot="header" class="clearfix">
+                    <span>节点信息</span>
+                    <el-button style="float: right; padding: 3px 0" type="text">操作按钮</el-button>
+                  </div>
+                  <div>
+                    <el-table :data="currGraph.selectedNodeObjData.tableData" style="width: 100%">
+                      <el-table-column label="Date" prop="date" />
+                      <el-table-column label="Name" prop="name" />
+                      <el-table-column align="right">
+                        <template v-if="canEditItem" slot="header" slot-scope="scope">
+                          <el-button size="mini" type="primary" @click="addTableRow(scope)">新增行</el-button>
+                        </template>
+                        <template v-if="canEditItem" slot-scope="scope">
+                          <el-button size="mini" type="danger" @click="delTableRow(scope.$index, scope.row)">删除</el-button>
+                        </template>
+                      </el-table-column>
+                    </el-table>
+                  </div>
+                </el-card>
               </el-row>
             </el-aside>
           </el-container>
@@ -117,7 +164,7 @@
 import G6 from '@antv/g6/src'
 import Minimap from '@antv/g6/build/minimap'
 import Grid from '@antv/g6/build/grid'
-import G6Init from '../workFlow/index'
+import G6Extension from '../workFlow/index'
 const mockData = [
   {
     typeId1: '', // 大类
@@ -144,25 +191,11 @@ const mockData = [
     ]
   }
 ]
-class ProcRouteInfo {
-  constructor(id, label) {
-    this.id = id
-    this.label = label
-    this.graphRenderData = {// G6渲染数据
-      nodes: [],
-      edges: []
-    }
-  }
-
-  toString() {
-    return '(' + this.x + ', ' + this.y + ')'
-  }
-}
 let procRouteKey = new Date().getTime()
 export default {
   data() {
     return {
-      procSteps: [
+      nodeComponents: [// 节点组件列表
         {
           id: 1,
           typeName: '金加工类',
@@ -185,7 +218,7 @@ export default {
         }
       ],
       workFlow: null,
-      productCategory: {
+      productCategory: {// 图纸集目录 树形展示 包括图纸名称、图纸状态
         filterText: '',
         data: [
           {
@@ -199,78 +232,12 @@ export default {
                   {
                     id: 111,
                     label: '加工路径1-A-1',
-                    graphRenderData: {// G6渲染数据
-                      nodes: [
-                        {
-                          id: 'node1', // step_id 工步组件Id
-                          label: '点焊', // step_name 工步组件名称
-                          nodeObjData:
-                          {
-                            tableData: [{
-                              date: '2016-05-02',
-                              name: '王小虎1',
-                              address: '上海市普陀区金沙江路 1518 弄'
-                            }, {
-                              date: '2016-05-04',
-                              name: '王小虎1',
-                              address: '上海市普陀区金沙江路 1517 弄'
-                            }, {
-                              date: '2016-05-01',
-                              name: '王小虎1',
-                              address: '上海市普陀区金沙江路 1519 弄'
-                            }, {
-                              date: '2016-05-03',
-                              name: '王小虎1',
-                              address: '上海市普陀区金沙江路 1516 弄'
-                            }]
-                          }
-                        },
-                        {
-                          id: 'node2',
-                          label: '组装',
-                          nodeObjData:
-                          {
-                            cs: 'cs'
-                          }
-                        }
-                      ],
-                      edges: [
-                        {
-                          source: 'node1',
-                          target: 'node2'
-                        }
-                      ]
-                    }
+                    status: 'Unchanged' // 状态只显示生效/失效  Added Modified Unchanged
                   },
                   {
                     id: 112,
                     label: '加工路径1-A-2',
-                    graphRenderData: {// G6渲染数据
-                      nodes: [
-                        {
-                          id: 'node1', // step_id 工步组件Id
-                          label: '点焊', // step_name 工步组件名称
-                          nodeObjData:
-                          {
-                            cs: 'cs'
-                          }
-                        },
-                        {
-                          id: 'node2',
-                          label: '组装',
-                          nodeObjData:
-                          {
-                            cs: 'cs'
-                          }
-                        }
-                      ],
-                      edges: [
-                        {
-                          source: 'node1',
-                          target: 'node2'
-                        }
-                      ]
-                    }
+                    status: 'Unchanged' // Added Modified Unchanged
                   }
                 ]
               }
@@ -282,56 +249,125 @@ export default {
           label: 'label'
         }
       },
-      procRoutes: {
-        filterText: '',
-        data: [
-          {
-            id: 1,
-            label: '一级 1',
-            children: [
+      graphSet: [// 图纸集 G6渲染数据
+        {
+          id: 111,
+          graphRenderData: {// G6渲染数据
+            nodes: [
               {
-                id: 4,
-                label: '二级 1-1',
-                children: [
-                  {
-                    id: 9,
-                    label: '三级 1-1-1'
-                  },
-                  {
-                    id: 10,
-                    label: '三级 1-1-2'
-                  }
-                ]
+                id: 'node1', // step_id 工步组件Id
+                label: '点焊', // step_name 工步组件名称
+                nodeObjData:
+              {
+                tableData: [{
+                  date: '2016-05-02',
+                  name: '王小虎1',
+                  address: '上海市普陀区金沙江路 1518 弄'
+                }, {
+                  date: '2016-05-04',
+                  name: '王小虎1',
+                  address: '上海市普陀区金沙江路 1517 弄'
+                }, {
+                  date: '2016-05-01',
+                  name: '王小虎1',
+                  address: '上海市普陀区金沙江路 1519 弄'
+                }, {
+                  date: '2016-05-03',
+                  name: '王小虎1',
+                  address: '上海市普陀区金沙江路 1516 弄'
+                }]
+              }
+              },
+              {
+                id: 'node2',
+                label: '组装',
+                nodeObjData:
+              {
+              }
+              }
+            ],
+            edges: [
+              {
+                source: 'node1',
+                target: 'node2'
               }
             ]
           }
-        ]
+        },
+        {
+          id: 112,
+          graphRenderData: {// G6渲染数据
+            nodes: [
+              {
+                id: 'node1', // step_id 工步组件Id
+                label: '点焊', // step_name 工步组件名称
+                nodeObjData:
+                {
+                  cs: 'cs'
+                }
+              },
+              {
+                id: 'node2',
+                label: '组装',
+                nodeObjData:
+                {
+                  cs: 'cs'
+                }
+              }
+            ],
+            edges: [
+              {
+                source: 'node1',
+                target: 'node2'
+              }
+            ]
+          }
+        }
+      ],
+      // 当前 graph实例 状态
+      currGraph: {
+        id: -1, // 图纸Id 和 图纸所在树形节点Id 相同
+        label: '',
+        editMode: false,
+        isItemSelected: false,
+        selectedNodeObjData: {// 选中节点数据模型
+          tableData: []
+        }
       },
-      selectedNodeObjData: {
-        tableData: [{
-          date: '2016-05-02',
-          name: '王小虎',
-          address: '上海市普陀区金沙江路 1518 弄'
-        }, {
-          date: '2016-05-04',
-          name: '王小虎',
-          address: '上海市普陀区金沙江路 1517 弄'
-        }, {
-          date: '2016-05-01',
-          name: '王小虎',
-          address: '上海市普陀区金沙江路 1519 弄'
-        }, {
-          date: '2016-05-03',
-          name: '王小虎',
-          address: '上海市普陀区金沙江路 1516 弄'
-        }]
-      },
-      selectedRouteId: -1
+      gridStyle: {
+        'background-color': '#fff0'
+      }
+    }
+  },
+  computed: {
+    canChangeMode() {
+      return this.currGraph.id === -1
+    },
+    canDelItem() {
+      return !(this.currGraph.isItemSelected && this.currGraph.editMode)
+    },
+    canEditItem() {
+      return (this.currGraph.isItemSelected && this.currGraph.editMode)
+    },
+    graphMode() {
+      return this.currGraph.editMode ? '编辑' : '只读'
+    },
+    graphId() {
+      return this.currGraph.id === -1 ? '  ' : this.currGraph.id
+    },
+    graphName() {
+      const id = this.currGraph.id
+      const state = this._getCurrGraphState(id)
+      return state.label || '请选择路径'
+    },
+    graphState() {
+      const id = this.currGraph.id
+      const state = this._getCurrGraphState(id)
+      return state.status || ''
     }
   },
   watch: {
     'productCategory.filterText': function(val) {
-      debugger
       this.$refs.tree.filter(val)
     }
   },
@@ -350,10 +386,10 @@ export default {
       this.workFlow = new G6.Graph({
         container: 'workFlowPanel',
         width: workFlowWidth,
-        height: 600,
+        height: 800,
         modes: {
-          default: ['drag-canvas', 'zoom-canvas', 'clickSelected'], //
-          view: [],
+          default: [], //
+          view: ['drag-canvas', 'zoom-canvas', 'clickSelected'],
           // 定义的 behavior 指定到这里，就可以支持Behavior中定义的交互
           edit: [
             'drag-canvas',
@@ -384,50 +420,114 @@ export default {
         // minZoom: 1,
         // maxZoom: 3
       })
-      this.workFlow.setMode('edit')
+      this._setGraphMode('view')
+      this.workFlow.set('AutoRendering', false)
+      this._initEvents()
+      window.workFlow = this.workFlow
+    })
+  },
+  methods: {
+    _initEvents() {
       const self = this
       this.workFlow.on('afterItemSelected', items => {
-        debugger
         if (items && items.length > 0) {
+          self.currGraph.isItemSelected = true
           const item = this.workFlow.findById(items[0])
           // 将节点的 nodeObjData 赋值给表格组件绑定的变量
           // 表格组件中的绑定数组 和 tem.getModel().nodeObjData 是同一个对象
           const nodeModel = item.getModel()
           nodeModel.nodeObjData = nodeModel.nodeObjData || {}
           nodeModel.nodeObjData.tableData = nodeModel.nodeObjData.tableData || []
-          self.selectedNodeObjData = nodeModel.nodeObjData
+          self.currGraph.selectedNodeObjData = nodeModel.nodeObjData
         } else {
-          self.selectedNodeObjData = { tableData: [] }
+          self.currGraph.isItemSelected = false
+          self.currGraph.selectedNodeObjData = { tableData: [] }
         }
       })
-      window.workFlow = this.workFlow
-    })
-  },
-  methods: {
+      // beforeadditem
+      this.workFlow.on('afteradditem', (e) => {
+        if (e.model.shape === 'process-route' && !self.workFlow.get('AutoRendering')) {
+          const node = this.$refs.tree.getNode(self.currGraph.id)
+          if (node.data.status === 'Unchanged') {
+            node.data.status = 'Modified'
+            debugger
+          }
+        }
+      })
+      this.workFlow.on('afterremoveitem', (e) => {
+        if (!self.workFlow.get('AutoRendering')) {
+          const node = this.$refs.tree.getNode(self.currGraph.id)
+          if (node.data.status === 'Unchanged') {
+            node.data.status = 'Modified'
+            debugger
+          }
+        }
+      })
+    },
+    // 删除图纸后，重置工作区
+    _clearWorkspace() {
+      this.workFlow.set('AutoRendering', true)
+      this.workFlow.clear()
+      this.workFlow.paint()
+      this.workFlow.zoomTo(1)
+      this._setGraphMode('view')
+      this.currGraph.id = -1
+      this.currGraph.label = ''
+      this.currGraph.editMode = false
+      this.currGraph.isItemSelected = false
+      this.currGraph.selectedNodeObjData = { tableData: [] }
+      this.workFlow.set('AutoRendering', false)
+      debugger
+    },
+    _renderWorkspace(graphNodeData) {
+      this.workFlow.set('AutoRendering', true)
+      this._clearWorkspace()
+      this.workFlow.set('AutoRendering', true)
+      this.currGraph.id = graphNodeData.id
+      this.currGraph.label = graphNodeData.label
+      const graphData = this.graphSet.find((n) => n.id === graphNodeData.id)
+      if (graphData.graphRenderData.nodes.length === 0) {
+        this.workFlow.set('AutoRendering', false)
+        return
+      }
+      this.workFlow.read(graphData.graphRenderData)
+      this.fitScreen()
+      this.workFlow.set('AutoRendering', false)
+      debugger
+    },
+    // 设置工作模状态
+    _setGraphMode(mode) {
+      this.workFlow.setMode(mode)
+      this.currGraph.mode = mode
+    },
+    _getCurrGraphState(id) {
+      if (this.$refs.tree && id !== -1) {
+        const node = this.$refs.tree.getNode(id)
+        return node.data
+      }
+      return {}
+    },
     nodeDragStartHandler(message, event) {
       // const addModel = this.getNodeConfig(message)
       // const ghost = createDOM('<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"' + ' style="opacity:0"/>')
       // event.dataTransfer.setDragImage(ghost, 0, 0)
+
+      console.log('DragStart')
+
       this.workFlow.set('onDragAddNode', true)
       this.workFlow.set('addModel', { lableName: message })
     },
-    nodeDragEndHandler(event) {
+    nodeDropHandler(event) {
+      console.log('drop')
       // 触发G6 canvas鼠标释放事件
       this.workFlow.emit('canvas:mouseup', event) // 同步调用
       this.workFlow.set('onDragAddNode', false)
       this.workFlow.set('addModel', null)
     },
-    /**
-     * 获取节点配置
-     */
-    getNodeConfig(nodeName) {
-      switch (nodeName) {
-        case 'signalCatch':
-          return 'signal-catch-node'
-        default:
-          return 'task-node'
-      }
+    nodeDragEndHandler(event) {
+      console.log('DragEnd')
     },
+
     filterNode(value, data) {
       if (!value) return true
       return data.label.indexOf(value) !== -1
@@ -436,31 +536,22 @@ export default {
      * 选择加工路径，进行渲染，保存所有节点数据
      */
     handleNodeClick(data, node, self) {
-      debugger
-      // const srcData = this.productCategory
-      // const graphData = this.workFlow.save()
-      // const editId = this.selectedRouteId
-      debugger
       if (node.level === 3) {
-        if (this.selectedRouteId === node.id) {
+        if (this.currGraph.id === data.id) {
           return
         }
-        this.selectedRouteId = node.id
-        this.selectedNodeObjData = { tableData: [] }
-        if (data.graphRenderData.nodes.length === 0) {
-          this.workFlow.clear()
-          this.workFlow.paint()
-          this.workFlow.zoomTo(1)
-          return
+        // 切换图纸
+
+        const state = this._getCurrGraphState(this.currGraph.id)
+        if (state.status === 'Added' || state.status === 'Modified') {
+          this._saveGraphDraft()
         }
-        this.workFlow.read(data.graphRenderData)
-        this.workFlow.fitView(5)
-        // if (this.workFlow.getZoom() > 5) {
-        //   this.workFlow.zoomTo(4)
-        // }
+        this._renderWorkspace(data)
       }
     },
-    addTreeNode(data) {
+    addGraph(data) {
+      const self = this
+
       this.$prompt('请输入加工路径名称', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -473,12 +564,19 @@ export default {
           message: '创建成功'
         })
         console.log('button')
-        debugger
-        const newChild = new ProcRouteInfo(procRouteKey++, value)
+
+        const newChild = { id: procRouteKey++, label: value, status: 'Added' }
         if (!data.children) {
           this.$set(data, 'children', [])
         }
         data.children.push(newChild)
+        self.graphSet.push({
+          id: newChild.id,
+          graphRenderData: {// G6渲染数据
+            nodes: [],
+            edges: []
+          }
+        })
       }).catch(() => {
         this.$message({
           type: 'info',
@@ -486,25 +584,11 @@ export default {
         })
       })
     },
-    reNameTreeNode(data) {
-      this.$prompt('请输入加工路径名称', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        inputErrorMessage: '名称格式不正确'
-      }).then(({ value }) => {
-        data.label = value
-        this.$message({
-          type: 'success',
-          message: '重命名成功'
-        })
-      }).catch(() => {
-        this.$message({
-          type: 'info',
-          message: '取消输入'
-        })
-      })
+    reNameGraph() {
+
     },
     delTreeNode(node, data) {
+      // 请求删除 加工路径  param: data.id
       const parent = node.parent
       const children = parent.data.children || parent.data
       const index = children.findIndex(d => d.id === data.id)
@@ -514,17 +598,71 @@ export default {
      * 必须使用非变异方法修改数组，否则 item.getModel().nodeObjData 不会发生改变
      */
     delTableRow(index, row) {
-      this.selectedNodeObjData.tableData.splice(index, 1)
+      this.currGraph.selectedNodeObjData.tableData.splice(index, 1)
     },
     addTableRow(scope) {
       // const h = this.productCategory
-      debugger
-      this.selectedNodeObjData.tableData.push({
+
+      this.currGraph.selectedNodeObjData.tableData.push({
         date: '2016-05-04',
         name: '王小虎casdsdc',
         address: '上海市普陀区金沙江路 1517 弄'
       })
-      debugger
+    },
+    changeGraphMode(val) {
+      if (val) {
+        this._setGraphMode('edit')
+      } else {
+        this._setGraphMode('view')
+      }
+    },
+    graphDelItem() {
+      const selectedItem = this.workFlow.get('selectedItems')
+      if (selectedItem && selectedItem[0]) {
+        const id = selectedItem[0]
+        const item = this.workFlow.findById(id)
+        this.workFlow.removeItem(item)
+      }
+      this.workFlow.set('selectedItems', [])
+      this.workFlow.emit('afterItemSelected', [])
+    },
+    _saveGraphDraft() {
+      const graphId = this.currGraph.id
+      const srcData = this.graphSet.find(n => n.id === graphId)
+      const graphEditData = this.workFlow.save()
+      // 清空edge的锚点
+      const edges = graphEditData.edges.map(n => {
+        return { source: n.source, target: n.target }
+      })
+      srcData.graphRenderData = { nodes: graphEditData.nodes, edges: edges }
+    },
+    saveGraph() {
+      // 保存到服务器
+    },
+    delGraph() {
+      const node = this.$refs.tree.getNode(this.currGraph.id)
+      this.$refs.tree.remove(node)
+      this._clearWorkspace()
+      // 请求删除 加工路径  param: this.currGraph.id
+    },
+    fitScreen() {
+      this.workFlow.fitView(50)
+      if (this.workFlow.getZoom() > 4) {
+        this.workFlow.zoomTo(3)
+      }
+    },
+    zoomIn() {
+      this.workFlow.zoom(1.1, this.workFlow.get('viewController')._getViewCenter())
+    },
+    zoomOut() {
+      this.workFlow.zoom(0.9, this.workFlow.get('viewController')._getViewCenter())
+    },
+    setGrid() {
+      if (this.gridStyle['background-color'] === '#fff') {
+        this.gridStyle['background-color'] = '#fff0'
+      } else {
+        this.gridStyle['background-color'] = '#fff'
+      }
     }
   }
 }
@@ -553,11 +691,20 @@ export default {
 .el-button--mini.is-circle {
     padding: 5px !important;
 }
-/* #workFlowPanel > canvas{
-  width: 100% !important;
-  height: 100%;
-} */
-/* #canvas_1{
-  width: 100% !important;
-} */
+.tool-panel-button {
+    border: 0px solid #DCDFE6 !important;
+    padding: 5px 10px !important;
+    font-size: 14px;
+    border-radius: 4px;
+}
+.tool-panel-divider{
+  margin: 4px;
+  border-left: 1px solid #E9E9E9;
+}
+.tool-panel-button+.tool-panel-button{
+    margin-left: 0px !important;
+}
+.graph-status>span{
+  font-size: small;
+}
 </style>

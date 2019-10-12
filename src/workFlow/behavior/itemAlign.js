@@ -1,5 +1,6 @@
 import each from '@antv/util/lib/each'
-import vec2 from '@antv/util/lib/matrix/vec2'
+const vec2 = require('@antv/util/lib/matrix/vec2')
+// import vec2 from '@antv/util/lib/matrix/vec2'
 import mix from '@antv/util/lib/mix'
 export default function(G6) {
   G6.registerBehavior('itemAlign', {

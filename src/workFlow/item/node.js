@@ -46,6 +46,7 @@ export default function(G6) {
             }
           }
         })
+        // debugger
         anchor.isAnchor = true
         anchor.toFront()
         let hotpot
