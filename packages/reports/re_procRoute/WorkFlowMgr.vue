@@ -671,7 +671,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .el-main {
   padding: 0px !important;
 }

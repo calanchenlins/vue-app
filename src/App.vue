@@ -1,19 +1,15 @@
 <template>
   <div id="app">
-    <!--     <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App" /> -->
     <work-flow-mgr />
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
 import WorkFlowMgr from '../packages/reports/re_procRoute/WorkFlowMgr'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld,
     WorkFlowMgr
   }
 }
