@@ -8,7 +8,7 @@
 
 <script>
 import HelloWorld from './components/HelloWorld.vue'
-import WorkFlowMgr from './components/WorkFlowMgr.vue'
+import WorkFlowMgr from '../packages/reports/re_procRoute/WorkFlowMgr'
 
 export default {
   name: 'App',

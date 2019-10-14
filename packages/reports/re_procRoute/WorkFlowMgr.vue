@@ -164,7 +164,10 @@
 import G6 from '@antv/g6/src'
 import Minimap from '@antv/g6/build/minimap'
 import Grid from '@antv/g6/build/grid'
-import G6Extension from '../workFlow/index'
+import registerItem from './workFlow/item'
+import registerBehavior from './workFlow/behavior'
+registerItem(G6)
+registerBehavior(G6)
 const mockData = [
   {
     typeId1: '', // 大类
