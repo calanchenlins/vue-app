@@ -1,6 +1,9 @@
+// CommonJS 中使用 module.exports = expression
+// webpack 会转换为 ES6语法: export default expression(变量、类、函数)
+// 因此可以直接使用 import defaultExport(任意名称) from "module-name" 导入 CommonJS 模块
+// 例外: 如果报错，可使用 import * as name from "module-name" 导入整个模块(原因可能与 Object.defineProperty(exports, "__esModule", { value: true}); 有关)
 import each from '@antv/util/lib/each'
-const vec2 = require('@antv/util/lib/matrix/vec2')
-// import vec2 from '@antv/util/lib/matrix/vec2'
+import * as vec2 from '@antv/util/lib/matrix/vec2'
 import mix from '@antv/util/lib/mix'
 export default function(G6) {
   G6.registerBehavior('itemAlign', {
@@ -33,6 +36,7 @@ export default function(G6) {
       const rc = { x: bbox.x + bbox.width, y: bbox.y + bbox.height / 2 }
       const nodes = this.graph.getNodes()
       each(nodes, (node) => {
+        debugger
         const horizontalLines = []
         const verticalLines = []
         let p = null

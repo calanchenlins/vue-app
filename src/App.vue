@@ -5,8 +5,7 @@
 </template>
 
 <script>
-import WorkFlowMgr from '../packages/reports/re_procRoute/WorkFlowMgr'
-
+import WorkFlowMgr from '@app/packages/reports/re_procRoute/WorkFlowMgr'
 export default {
   name: 'App',
   components: {
