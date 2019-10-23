@@ -1,0 +1,10 @@
+GET  http://localhost:8080/mock/api/CatalogV2/items HTTP/1.1
+
+### Mock 接口测试
+ 
+GET  http://localhost:8080/mock/api/Catalog HTTP/1.1
+#Accept: text/html
+###
+
+GET  http://localhost:8080/anyUrl HTTP/1.1
+Accept: text/html

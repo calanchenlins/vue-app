@@ -4,9 +4,11 @@
 import axios from 'axios'
 import * as userSrv from '@/utils/auth/UserSrv'
 import { MessageBox, Message } from 'element-ui'
+import qs from 'qs'
 import * as jwt from 'jsonwebtoken'
 
 const service = axios.create({
+  baseURL: process.env.VUE_APP_BASE_API,
   timeout: 5000
 })
 
@@ -15,6 +17,10 @@ const service = axios.create({
  */
 service.interceptors.request.use(
   config => {
+    // axio对于data复杂对象默认使用Content-Type: application/json;
+    config.data = qs.stringify(config.data)
+    config.headers['Content-type'] = 'application/x-www-form-urlencoded'
+
     const token = userSrv.getToken()
 
     if (token) {
@@ -23,7 +29,7 @@ service.interceptors.request.use(
     return config
   },
   error => {
-    console.log(error)
+    console.log('request err:' + error)
     return Promise.reject(error)
   }
 )
@@ -31,6 +37,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   response => {
     if (response.status !== 200) {
+      // Http 状态码判断
       if (response.status === 401 || response.status === 403) {
         MessageBox.confirm('You have been logged out, you can cancel to stay on this page, or log in again', 'Confirm logout', {
           confirmButtonText: 'Re-Login',
@@ -43,11 +50,23 @@ service.interceptors.response.use(
       }
       return Promise.reject(new Error(response.message || 'Error'))
     } else {
-      return response.data
+      // 服务状态码判断
+      const responseData = response.data
+      if (responseData.Code !== 2000) {
+        console.log('services err:' + responseData.Message)
+        Message({
+          message: responseData.message,
+          type: 'error',
+          duration: 5 * 1000
+        })
+        return Promise.reject(new Error(responseData.Message || 'Error'))
+      } else {
+        return responseData.Data
+      }
     }
   },
   error => {
-    console.log('err:' + error) // for debug
+    console.log('response err:' + error) // for debug
     Message({
       message: error.message,
       type: 'error',

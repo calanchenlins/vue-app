@@ -22,6 +22,7 @@
     "vue": "^2.6.10"
   },
   "devDependencies": {
+    "@babel/register": "^7.6.2",
     "@vue/cli-plugin-babel": "^3.11.0",
     "@vue/cli-plugin-eslint": "^3.11.0",
     "@vue/cli-service": "^3.11.0",
@@ -29,6 +30,7 @@
     "babel-plugin-component": "^1.1.1",
     "eslint": "^5.16.0",
     "eslint-plugin-vue": "^5.0.0",
+    "mockjs": "^1.0.1-beta3",
     "vue-template-compiler": "^2.6.10"
   },
   "eslintConfig": {
