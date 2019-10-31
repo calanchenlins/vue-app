@@ -90,9 +90,9 @@ export default function(G6) {
     },
     _addNode(p) {
       if (this.graph.get('onDragAddNode')) {
-        const addModel = this.graph.get('addModel')
+        const drawingComponent = this.graph.get('addModel')
         const timestamp = new Date().getTime()
-        const id = addModel.lableName + timestamp
+        const id = drawingComponent.id.toString() + '-' + timestamp // id必须为字符串
         const x = p.x
         const y = p.y
         var addNode = this.graph.add('node', {
@@ -100,10 +100,10 @@ export default function(G6) {
           y: y,
           id: id,
           ...editorStyle.nodeStyle,
-          label: addModel.lableName,
+          label: drawingComponent.name,
           shape: 'process-route',
-          testcfg: 'tt',
-          nodeObjData: {}
+          nodeObjData: {}, // 节点信息
+          drawingComponent: drawingComponent// 组件信息
         })
         const kk = addNode.getModel()
         this.graph.emit('afterItemAdd', {})

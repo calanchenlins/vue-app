@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-loading.fullscreen.lock="loading">
     <el-container>
       <el-container>
         <el-aside width="10%">
@@ -8,7 +8,7 @@
             ref="tree"
             node-key="id"
             class="filter-tree"
-            :data="productCategory.data"
+            :data="graphTree"
             :props="productCategory.defaultProps"
             :filter-node-method="filterNode"
             accordion
@@ -20,7 +20,10 @@
           >
             <span slot-scope="{ node, data }" class="custom-tree-node">
               <div style="width:100%">
-                <span style="margin:3px">{{ node.label }}</span>
+                <el-tooltip class="item" effect="light" :content="node.label" placement="right" :disabled="node.level !== 3 || node.label.length<=10">
+                  <span style="margin:3px">{{ node.label.length>10? (node.label.slice(0,10)+'..') :(node.label) }}</span>
+                </el-tooltip>
+
                 <template v-if="node.level === 2">
                   <el-divider direction="vertical" />
                   <el-tooltip class="item" effect="dark" content="新建加工路径" placement="right-start">
@@ -47,16 +50,16 @@
         </el-aside>
         <el-aside width="8%">
           <el-collapse accordion>
-            <el-collapse-item v-for="(procType) in nodeComponents" :key="procType.id">
+            <el-collapse-item v-for="(procType) in nodeComponents" :key="procType.id" style="text-align:center;">
               <template slot="title">
                 <i class="header-icon el-icon-info" style="padding-left:20px" />
                 <p style="padding-left:10px">{{ procType.typeName }}</p>
               </template>
-              <div v-for="(step) in procType.steps" :key="step.id" :data-item="step.typeName">
+              <div v-for="(step) in procType.steps" :key="step.id" :data-item="step.typeName" class="graph-component">
                 <img
+                  class=""
                   src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDIxLjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IuWbvuWxgl8xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCIKCSB2aWV3Qm94PSIwIDAgMTA3IDYxIiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAxMDcgNjE7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7ZmlsbDojRkZGN0U2O3N0cm9rZTojRkZBOTQwO3N0cm9rZS1taXRlcmxpbWl0OjEwO30KCS5zdDF7ZmlsbDojRkZBOTQwO30KPC9zdHlsZT4KPHRpdGxlPnRhc2tfMTwvdGl0bGU+CjxnIGlkPSLlm77lsYJfMS0yIj4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik04LjksMC41aDg5LjJjNC42LDAsOC40LDMuOCw4LjQsOC40djQzLjJjMCw0LjYtMy44LDguNC04LjQsOC40SDguOWMtNC42LDAtOC40LTMuOC04LjQtOC40VjguOQoJCUMwLjUsNC4zLDQuMywwLjUsOC45LDAuNXoiLz4KCTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik01Ni45LDEzLjVsOS43LDkuN2gtOC44Yy0wLjYsMC0xLjEtMC42LTEuMS0xLjF2LTguNkg1Ni45eiBNNDUuOCwzNi41Yy0wLjYsMC0xLjEsMC42LTEuMSwxLjEKCQljMCwwLjYsMC42LDEuMSwxLjEsMS4xSDU5YzAuNiwwLDEuMS0wLjYsMS4xLTEuMWMwLTAuNi0wLjYtMS4xLTEuMS0xLjFINDUuOHogTTQ1LjgsMzEuMWMtMC42LDAtMS4xLDAuNi0xLjEsMS4xCgkJYzAsMC42LDAuNiwxLjEsMS4xLDEuMWg2LjZjMC42LDAsMS4xLTAuNiwxLjEtMS4xYzAtMC42LTAuNi0xLjEtMS4xLTEuMUg0NS44eiBNNjYuNywyNS40djE1LjRjMCwxLjktMS41LDMuMi0zLjIsMy4ySDQzLjgKCQljLTEuOSwwLTMuMi0xLjUtMy4yLTMuMnYtMjRjMC0xLjksMS41LTMuMiwzLjItMy4yaDEwLjlWMjNjMCwxLjUsMS4xLDIuNiwyLjYsMi42aDkuNFYyNS40eiIvPgo8L2c+Cjwvc3ZnPgo="
-                  style="width: 80px; height: 44px;"
-                  @dragstart="nodeDragStartHandler(step.name, $event)"
+                  @dragstart="nodeDragStartHandler(step, $event)"
                   @dragend="nodeDragEndHandler($event)"
                 >
                 <div>{{ step.name }}</div>
@@ -71,11 +74,18 @@
                 <el-row>
                   <el-col :span="11">
                     <div class="graph-status">
-                      <span>状态：</span><span style="font-weight: bolder;color: #409EFF;">生效</span><span style="font-weight: bolder;color: #F56C6C;">失效</span>
+                      <span>状态：</span>
+                      <span v-if="graphValid==='1'" style="font-weight: bolder;color: #409EFF;">生效</span>
+                      <span v-else-if="graphValid==='0'" style="font-weight: bolder;color: #F56C6C;">失效</span>
                       <el-divider direction="vertical" />
-                      <span>编号：{{ graphId }}</span>
+                      <el-tooltip class="item" effect="light" :content="graphId" placement="right" :disabled="graphId.length<=12">
+                        <span>编号：{{ graphId.length > 12 ? (graphId.slice(0, 12) + '..') : graphId }}</span>
+                      </el-tooltip>
                       <el-divider direction="vertical" />
-                      <span>名称：{{ graphName }}</span>
+
+                      <el-tooltip class="item" effect="light" :content="graphName" placement="right" :disabled="graphName.length<=12">
+                        <span>名称：{{ graphName.length > 12 ? (graphName.slice(0, 12) + '..') : graphName }}</span>
+                      </el-tooltip>
                       <el-divider direction="vertical" />
                       <span>模式：{{ graphMode }}</span>
                       <el-divider direction="vertical" />
@@ -106,13 +116,13 @@
                     <el-tooltip class="item" effect="dark" content="重命名加工路径名称" placement="bottom">
                       <el-button size="mini" type="warning" :disabled="!currGraph.editMode" @click.stop="() => reNameGraph()">重命名</el-button>
                     </el-tooltip>
-                    <el-tooltip class="item" effect="dark" content="失效本条加工路径！" placement="bottom">
-                      <el-button size="mini" type="danger" :disabled="!currGraph.editMode" @click="drafGraph()">失效</el-button>
+                    <el-tooltip class="item" effect="dark" :content="graphValid==='1'?'失效本条加工路径！':'生效本条加工路径！'" placement="bottom">
+                      <el-button size="mini" :type="graphValid==='1'?'danger':'primary'" :disabled="!currGraph.editMode" @click="changeGraphValid()">{{ graphValid==='1'?'失效':'生效' }}</el-button>
                     </el-tooltip>
                     <el-tooltip class="item" effect="dark" content="删除本条加工路径，且无法撤回！" placement="bottom">
                       <el-button size="mini" type="danger" :disabled="!currGraph.editMode" @click="delGraph()">删除</el-button>
                     </el-tooltip>
-                    <el-button size="mini" type="primary" icon="el-icon-upload" :disabled="!currGraph.editMode" @click="saveGraph()">提交</el-button>
+                    <el-button size="mini" type="primary" icon="el-icon-upload" :disabled="!currGraph.editMode || graphState==='Unchanged'" @click="saveGraph()">提交</el-button>
                   </el-col>
                 </el-row>
 
@@ -126,7 +136,7 @@
               </div>
 
             </el-main>
-            <el-aside width="30%" class="panel-detail">
+            <el-aside width="0%" class="panel-detail">
               <el-row>
                 <div id="workFlowMiniMap" ref="miniMapContainer" />
               </el-row>
@@ -166,171 +176,54 @@ import Minimap from '@antv/g6/build/minimap'
 import Grid from '@antv/g6/build/grid'
 import registerItem from './workFlow/item'
 import registerBehavior from './workFlow/behavior'
+import ProcRouteService from '@app/packages/api/re_procRoute/index'
+// 组件内部私有对象
+let procRouteService = null
+let workFlow = null
+let procRouteKey = new Date().getTime()
 registerItem(G6)
 registerBehavior(G6)
-const mockData = [
-  {
-    typeId1: '', // 大类
-    typeName1: '',
-    typeId2: '', // 小类
-    typeName2: '',
-    procRouteId: 111, // 加工路径Id
-    procRouteName: '加工路径1-A-1',
-    procRouteInfo: [
-      {
-        id: 'node1', // step_id 工步组件Id
-        label: '点焊', // step_name 工步组件名称
-        stepNum: 1,
-        tableData1: [],
-        tableData2: []
-      },
-      {
-        id: 'node2', // step_id 工步组件Id
-        label: '组装', // step_name 工步组件名称
-        stepNum: 2,
-        tableData1: [],
-        tableData2: []
-      }
-    ]
-  }
-]
-let procRouteKey = new Date().getTime()
 export default {
-  data() {
+  inheritAttrs: false,
+  props: {// 不能直接给对象、数组赋值，可以pop、push
+    bmddjURL: {
+      type: String,
+      default: ''
+    },
+    nodeComponents: { // 节点组件列表
+      type: Array,
+      default() {
+        return []
+      }
+    },
+    graphTree: { // 图纸集目录 树形展示 包括图纸名称、图纸状态
+      type: Array,
+      default() {
+        return []
+      }
+    },
+    graphSet: { // 图纸集 G6渲染数据
+      type: Array,
+      default() {
+        return []
+      }
+    }
+
+  },
+  data() { // 建议只包含数据，而不是有状态的对象
     return {
-      nodeComponents: [// 节点组件列表
-        {
-          id: 1,
-          typeName: '金加工类',
-          steps: [
-            {
-              id: 11,
-              name: '点焊'
-            }
-          ]
-        },
-        {
-          id: 2,
-          typeName: '装配类',
-          steps: [
-            {
-              id: 21,
-              name: '组装'
-            }
-          ]
-        }
-      ],
+      // 当前 graph实例 状态
+      // 组件内部状态数据
       workFlow: null,
-      productCategory: {// 图纸集目录 树形展示 包括图纸名称、图纸状态
+      productCategory: {
         filterText: '',
-        data: [
-          {
-            id: 1,
-            label: '类别 1',
-            children: [
-              {
-                id: 11,
-                label: '类 A',
-                children: [
-                  {
-                    id: 111,
-                    label: '加工路径1-A-1',
-                    status: 'Unchanged' // 状态只显示生效/失效  Added Modified Unchanged
-                  },
-                  {
-                    id: 112,
-                    label: '加工路径1-A-2',
-                    status: 'Unchanged' // Added Modified Unchanged
-                  }
-                ]
-              }
-            ]
-          }
-        ],
         defaultProps: {
           children: 'children',
           label: 'label'
         }
       },
-      graphSet: [// 图纸集 G6渲染数据
-        {
-          id: 111,
-          graphRenderData: {// G6渲染数据
-            nodes: [
-              {
-                id: 'node1', // step_id 工步组件Id
-                label: '点焊', // step_name 工步组件名称
-                nodeObjData:
-              {
-                tableData: [{
-                  date: '2016-05-02',
-                  name: '王小虎1',
-                  address: '上海市普陀区金沙江路 1518 弄'
-                }, {
-                  date: '2016-05-04',
-                  name: '王小虎1',
-                  address: '上海市普陀区金沙江路 1517 弄'
-                }, {
-                  date: '2016-05-01',
-                  name: '王小虎1',
-                  address: '上海市普陀区金沙江路 1519 弄'
-                }, {
-                  date: '2016-05-03',
-                  name: '王小虎1',
-                  address: '上海市普陀区金沙江路 1516 弄'
-                }]
-              }
-              },
-              {
-                id: 'node2',
-                label: '组装',
-                nodeObjData:
-              {
-              }
-              }
-            ],
-            edges: [
-              {
-                source: 'node1',
-                target: 'node2'
-              }
-            ]
-          }
-        },
-        {
-          id: 112,
-          graphRenderData: {// G6渲染数据
-            nodes: [
-              {
-                id: 'node1', // step_id 工步组件Id
-                label: '点焊', // step_name 工步组件名称
-                nodeObjData:
-                {
-                  cs: 'cs'
-                }
-              },
-              {
-                id: 'node2',
-                label: '组装',
-                nodeObjData:
-                {
-                  cs: 'cs'
-                }
-              }
-            ],
-            edges: [
-              {
-                source: 'node1',
-                target: 'node2'
-              }
-            ]
-          }
-        }
-      ],
-      // 当前 graph实例 状态
       currGraph: {
         id: -1, // 图纸Id 和 图纸所在树形节点Id 相同
-        label: '',
         editMode: false,
         isItemSelected: false,
         selectedNodeObjData: {// 选中节点数据模型
@@ -339,7 +232,8 @@ export default {
       },
       gridStyle: {
         'background-color': '#fff0'
-      }
+      },
+      loading: false
     }
   },
   computed: {
@@ -367,6 +261,11 @@ export default {
       const id = this.currGraph.id
       const state = this._getCurrGraphState(id)
       return state.status || ''
+    },
+    graphValid() {
+      const id = this.currGraph.id
+      const state = this._getCurrGraphState(id)
+      return state.st_flag
     }
   },
   watch: {
@@ -386,7 +285,7 @@ export default {
         container: 'workFlowMiniMap'
       })
       // 整个组件渲染完成后
-      this.workFlow = new G6.Graph({
+      workFlow = new G6.Graph({
         container: 'workFlowPanel',
         width: workFlowWidth,
         height: 800,
@@ -424,18 +323,19 @@ export default {
         // maxZoom: 3
       })
       this._setGraphMode('view')
-      this.workFlow.set('AutoRendering', false)
+      workFlow.set('AutoRendering', false)
       this._initEvents()
-      window.workFlow = this.workFlow
+      window.workFlow = workFlow
+      procRouteService = new ProcRouteService(this._props.bmddjURL)
     })
   },
   methods: {
     _initEvents() {
       const self = this
-      this.workFlow.on('afterItemSelected', items => {
+      workFlow.on('afterItemSelected', items => {
         if (items && items.length > 0) {
           self.currGraph.isItemSelected = true
-          const item = this.workFlow.findById(items[0])
+          const item = workFlow.findById(items[0])
           // 将节点的 nodeObjData 赋值给表格组件绑定的变量
           // 表格组件中的绑定数组 和 tem.getModel().nodeObjData 是同一个对象
           const nodeModel = item.getModel()
@@ -448,84 +348,84 @@ export default {
         }
       })
       // beforeadditem
-      this.workFlow.on('afteradditem', (e) => {
-        if (e.model.shape === 'process-route' && !self.workFlow.get('AutoRendering')) {
+      workFlow.on('afteradditem', (e) => {
+        if (e.model.shape === 'process-route' && !workFlow.get('AutoRendering')) {
           const node = this.$refs.tree.getNode(self.currGraph.id)
           if (node.data.status === 'Unchanged') {
             node.data.status = 'Modified'
-            debugger
           }
         }
       })
-      this.workFlow.on('afterremoveitem', (e) => {
-        if (!self.workFlow.get('AutoRendering')) {
+      workFlow.on('afterremoveitem', (e) => {
+        if (!workFlow.get('AutoRendering')) {
           const node = this.$refs.tree.getNode(self.currGraph.id)
           if (node.data.status === 'Unchanged') {
             node.data.status = 'Modified'
-            debugger
           }
         }
       })
     },
     // 删除图纸后，重置工作区
     _clearWorkspace() {
-      this.workFlow.set('AutoRendering', true)
-      this.workFlow.clear()
-      this.workFlow.paint()
-      this.workFlow.zoomTo(1)
+      workFlow.set('AutoRendering', true)
+      workFlow.clear()
+      workFlow.paint()
+      workFlow.zoomTo(1)
       this._setGraphMode('view')
       this.currGraph.id = -1
-      this.currGraph.label = ''
       this.currGraph.editMode = false
       this.currGraph.isItemSelected = false
       this.currGraph.selectedNodeObjData = { tableData: [] }
-      this.workFlow.set('AutoRendering', false)
-      debugger
+      workFlow.set('AutoRendering', false)
     },
     _renderWorkspace(graphNodeData) {
-      this.workFlow.set('AutoRendering', true)
+      workFlow.set('AutoRendering', true)
       this._clearWorkspace()
-      this.workFlow.set('AutoRendering', true)
+      workFlow.set('AutoRendering', true)
       this.currGraph.id = graphNodeData.id
-      this.currGraph.label = graphNodeData.label
       const graphData = this.graphSet.find((n) => n.id === graphNodeData.id)
       if (graphData.graphRenderData.nodes.length === 0) {
-        this.workFlow.set('AutoRendering', false)
+        workFlow.set('AutoRendering', false)
         return
       }
-      this.workFlow.read(graphData.graphRenderData)
+      workFlow.read(graphData.graphRenderData)
       this.fitScreen()
-      this.workFlow.set('AutoRendering', false)
-      debugger
+      workFlow.set('AutoRendering', false)
     },
     // 设置工作模状态
     _setGraphMode(mode) {
-      this.workFlow.setMode(mode)
+      workFlow.setMode(mode)
       this.currGraph.mode = mode
     },
     _getCurrGraphState(id) {
       if (this.$refs.tree && id !== -1) {
         const node = this.$refs.tree.getNode(id)
-        return node.data
+        if (node) {
+          return node.data
+        }
       }
       return {}
     },
-    nodeDragStartHandler(message, event) {
+    _getCurrGraphData(id) {
+      const currGraph = this.graphSet.find((n) => n.id === id)
+      return currGraph
+    },
+    nodeDragStartHandler(drawingComponent, event) {
       // const addModel = this.getNodeConfig(message)
       // const ghost = createDOM('<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"' + ' style="opacity:0"/>')
       // event.dataTransfer.setDragImage(ghost, 0, 0)
 
       console.log('DragStart')
 
-      this.workFlow.set('onDragAddNode', true)
-      this.workFlow.set('addModel', { lableName: message })
+      workFlow.set('onDragAddNode', true)
+      workFlow.set('addModel', drawingComponent)
     },
     nodeDropHandler(event) {
       console.log('drop')
       // 触发G6 canvas鼠标释放事件
-      this.workFlow.emit('canvas:mouseup', event) // 同步调用
-      this.workFlow.set('onDragAddNode', false)
-      this.workFlow.set('addModel', null)
+      workFlow.emit('canvas:mouseup', event) // 同步调用
+      workFlow.set('onDragAddNode', false)
+      workFlow.set('addModel', null)
     },
     nodeDragEndHandler(event) {
       console.log('DragEnd')
@@ -549,54 +449,25 @@ export default {
         if (state.status === 'Added' || state.status === 'Modified') {
           this._saveGraphDraft()
         }
-        this._renderWorkspace(data)
+        const graphData = this.graphSet.find((n) => n.id === data.id)
+        const self = this
+        debugger
+        if (!graphData) {
+          procRouteService.GetProcRouteDetail(data.id)
+            .then((res) => {
+              self.graphSet.push(res)
+              self._renderWorkspace(data)
+              debugger
+            }).catch((error) => {
+              console.log(error)
+              debugger
+            })
+        } else {
+          this._renderWorkspace(data)
+        }
       }
     },
-    addGraph(data) {
-      const self = this
 
-      this.$prompt('请输入加工路径名称', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        // inputPattern: /[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\w](?:[\w-]*[\w])?\.)+[\w](?:[\w-]*[\w])?/,
-        inputErrorMessage: '名称格式不正确'
-      }).then(({ value }) => {
-        // 请求Guid
-        this.$message({
-          type: 'success',
-          message: '创建成功'
-        })
-        console.log('button')
-
-        const newChild = { id: procRouteKey++, label: value, status: 'Added' }
-        if (!data.children) {
-          this.$set(data, 'children', [])
-        }
-        data.children.push(newChild)
-        self.graphSet.push({
-          id: newChild.id,
-          graphRenderData: {// G6渲染数据
-            nodes: [],
-            edges: []
-          }
-        })
-      }).catch(() => {
-        this.$message({
-          type: 'info',
-          message: '取消输入'
-        })
-      })
-    },
-    reNameGraph() {
-
-    },
-    delTreeNode(node, data) {
-      // 请求删除 加工路径  param: data.id
-      const parent = node.parent
-      const children = parent.data.children || parent.data
-      const index = children.findIndex(d => d.id === data.id)
-      children.splice(index, 1)
-    },
     /**
      * 必须使用非变异方法修改数组，否则 item.getModel().nodeObjData 不会发生改变
      */
@@ -620,45 +491,236 @@ export default {
       }
     },
     graphDelItem() {
-      const selectedItem = this.workFlow.get('selectedItems')
+      const selectedItem = workFlow.get('selectedItems')
       if (selectedItem && selectedItem[0]) {
         const id = selectedItem[0]
-        const item = this.workFlow.findById(id)
-        this.workFlow.removeItem(item)
+        const item = workFlow.findById(id)
+        workFlow.removeItem(item)
       }
-      this.workFlow.set('selectedItems', [])
-      this.workFlow.emit('afterItemSelected', [])
+      workFlow.set('selectedItems', [])
+      workFlow.emit('afterItemSelected', [])
     },
     _saveGraphDraft() {
       const graphId = this.currGraph.id
       const srcData = this.graphSet.find(n => n.id === graphId)
-      const graphEditData = this.workFlow.save()
+      const graphEditData = workFlow.save()
       // 清空edge的锚点
       const edges = graphEditData.edges.map(n => {
         return { source: n.source, target: n.target }
       })
       srcData.graphRenderData = { nodes: graphEditData.nodes, edges: edges }
     },
+    addGraph(data) {
+      const self = this
+      this.$prompt('', '新建加工路径', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPlaceholder: '请输入名称'
+      }).then(({ value }) => {
+        const newChild = { id: (++procRouteKey).toString(), label: value, status: 'Added', st_flag: '0' }
+        if (!data.children) {
+          this.$set(data, 'children', [])
+        }
+        data.children.push(newChild)
+        self.graphSet.push({
+          id: newChild.id,
+          graphRenderData: {// G6渲染数据
+            nodes: [],
+            edges: []
+          }
+        })
+        this.$message({
+          type: 'success',
+          message: '创建成功'
+        })
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '已取消操作'
+        })
+      })
+    },
     saveGraph() {
+      this._saveGraphDraft()
       // 保存到服务器
+      const node = this.$refs.tree.getNode(this.currGraph.id)
+      const state = node.data
+
+      const graph = this.graphSet.find((n) => n.id === this.currGraph.id)
+      const graphData = graph.graphRenderData
+      // 获取需要保存的数据
+      const edges = graphData.edges.map(function(n) {
+        return { source: n.source, target: n.target }
+      })
+      const nodes = graphData.nodes.map(n => {
+        return { id: n.id, label: n.label, prve: null, next: null }
+      })
+      let validFlag = true
+      edges.forEach(n => {
+        const sourceNode = nodes.find(sn => sn.id === n.source)
+        const targetNode = nodes.find(tn => tn.id === n.target)
+        if (sourceNode.next || targetNode.prve) {
+          validFlag = false
+        }
+        sourceNode.next = targetNode.id
+        targetNode.prve = sourceNode.id
+      })
+      if (!validFlag) {
+        this.$message({
+          showClose: true,
+          message: '节点间只允许有一条连线，请删除多余连线!!',
+          duration: 0,
+          type: 'error'
+        })
+        return
+      }
+      const firstNode = nodes.find(n => n.prve === null)
+      if (!firstNode) {
+        this.$message({
+          showClose: true,
+          message: '路径不允许闭环，请删除多余连线!',
+          duration: 0,
+          type: 'error'
+        })
+        return
+      }
+      if (nodes.find(n => n.prve === null && n.next === null)) {
+        this.$message({
+          showClose: true,
+          message: '存在孤立节点，请删除!',
+          duration: 0,
+          type: 'error'
+        })
+        return
+      }
+      // 数据转换
+      // //主表
+      debugger
+      const procRoute = {
+        product_type_id: node.parent.data.id,
+        product_type_name: node.parent.data.label,
+        route_id: state.id,
+        route_name: state.label,
+        st_flag: state.st_flag
+      }
+      const procRoute_c = []
+      let step_seqCount = 0
+      const findNodes = function(linkedList) {
+        procRoute_c.push({
+          route_id: state.id,
+          step_id: linkedList.id,
+          step_name: linkedList.label,
+          step_seq: step_seqCount
+        })
+        step_seqCount++
+        if (linkedList.next) {
+          const nextNode = nodes.find(tn => tn.id === linkedList.next)
+          findNodes(nextNode)
+        }
+      }
+      findNodes(firstNode)
+      const addedFlag = state.status === 'Added'
+      const self = this
+      self.currGraph.editMode = false
+      self.loading = true
+      if (addedFlag) {
+        procRouteService.Save({ procRoute, procRoute_c })
+          .then((data) => {
+            debugger
+            // 更新 tree 组件
+            const newChild = { id: data, label: state.label, status: 'Unchanged', st_flag: state.st_flag }
+            node.parent.data.children.push(newChild)
+            self.$refs.tree.remove(node)
+            // 更新 graphSet 数据
+            graph.id = data
+            // 当前工作区图纸状态更新
+            self.$nextTick(function() {
+              self.currGraph.id = data
+              self.loading = false
+              self.$message({
+                showClose: true,
+                message: '保存成功！',
+                duration: 3000,
+                type: 'success'
+              })
+            }).catch(() => {
+              self.loading = false
+            })
+          })
+      } else {
+        procRouteService.Update({ procRoute, procRoute_c })
+          .then((data) => {
+            state.status = 'Unchanged'
+            self.loading = false
+            self.$message({
+              showClose: true,
+              message: '更新成功！',
+              duration: 3000,
+              type: 'success'
+            })
+            debugger
+          }).catch(() => {
+            self.loading = false
+            debugger
+          })
+      }
     },
     delGraph() {
+      const self = this
+      self.loading = true
+      procRouteService.Delete(this.currGraph.id)
+        .then((data) => {
+          self.loading = false
+          self.$message({
+            showClose: true,
+            message: '成功删除！',
+            duration: 3000,
+            type: 'success'
+          })
+        }).catch(() => {
+          self.loading = false
+        })
+      // 请求删除 加工路径  param: this.currGraph.id
       const node = this.$refs.tree.getNode(this.currGraph.id)
       this.$refs.tree.remove(node)
       this._clearWorkspace()
-      // 请求删除 加工路径  param: this.currGraph.id
+    },
+    reNameGraph() {
+      const node = this.$refs.tree.getNode(this.currGraph.id)
+      this.$prompt('', '重命名加工路径', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPlaceholder: '请输入名称'
+      }).then(({ value }) => {
+        node.data.label = value
+        node.data.status = node.data.status === 'Added' ? node.data.status : 'Modified'
+        this.$message({
+          type: 'success',
+          message: '修改成功！'
+        })
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '已取消操作'
+        })
+      })
+    },
+    changeGraphValid() {
+      const node = this.$refs.tree.getNode(this.currGraph.id)
+      node.data.st_flag = node.data.st_flag === '0' ? '1' : '0'
+      node.data.status = node.data.status === 'Added' ? node.data.status : 'Modified'
     },
     fitScreen() {
-      this.workFlow.fitView(50)
-      if (this.workFlow.getZoom() > 4) {
-        this.workFlow.zoomTo(3)
+      workFlow.fitView(50)
+      if (workFlow.getZoom() > 4) {
+        workFlow.zoomTo(3)
       }
     },
     zoomIn() {
-      this.workFlow.zoom(1.1, this.workFlow.get('viewController')._getViewCenter())
+      workFlow.zoom(1.1, workFlow.get('viewController')._getViewCenter())
     },
     zoomOut() {
-      this.workFlow.zoom(0.9, this.workFlow.get('viewController')._getViewCenter())
+      workFlow.zoom(0.9, workFlow.get('viewController')._getViewCenter())
     },
     setGrid() {
       if (this.gridStyle['background-color'] === '#fff') {
@@ -710,4 +772,14 @@ export default {
 .graph-status>span{
   font-size: small;
 }
+.graph-component > img{
+  height: 35px;
+  width: 64px;
+  /* padding: 4px;
+  border: 1px solid rgba(0, 0, 0, 0); */
+  border-radius: 2px;
+}
+/* .graph-component > div{
+  line-height: 0;
+} */
 </style>
