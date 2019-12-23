@@ -176,7 +176,7 @@ import Minimap from '@antv/g6/build/minimap'
 import Grid from '@antv/g6/build/grid'
 import registerItem from './workFlow/item'
 import registerBehavior from './workFlow/behavior'
-import ProcRouteService from '@app/packages/api/re_procRoute/index'
+import ProcRouteService from '@app/samples/workflowstudio/api'
 // 组件内部私有对象
 let procRouteService = null
 let workFlow = null

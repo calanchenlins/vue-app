@@ -1,6 +1,6 @@
 import Mock from 'mockjs'
 
-import procRoute from './procRoute'
+import procRoute from '../samples/workflowstudio/api/mock-api'
 
 const mocks = [
   ...procRoute

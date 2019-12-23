@@ -1,9 +1,8 @@
 import axios from 'axios'
 import qs from 'qs'
-import { Message } from 'element-ui'
-const baseURL = '/SC/ProcRoute'
+import { MessageBox, Message } from 'element-ui'
 const service = axios.create({
-  baseURL: baseURL,
+  baseURL: process.env.VUE_APP_BASE_API,
   timeout: 30000
 })
 service.interceptors.request.use(
@@ -27,7 +26,7 @@ service.interceptors.response.use(
     if (res.Code !== 2000) {
       console.log('services err:' + res.Message)
       Message({
-        message: res.message,
+        message: res.Message,
         type: 'error',
         duration: 5 * 1000
       })
@@ -57,12 +56,13 @@ export default class ProcRouteService {
    * 如果返回 new Promise() ，那么在调用方可以使用 then catch语法
    */
   Save(data) {
+    debugger
     return new Promise((resolve, reject) => {
       service({
-        url: '/ProcessingRouteSave',
+        url: '/ProcRoute/Save',
         method: 'post',
-        data: data,
-        params: this.bmddjURL
+        data: data
+        // params: this.bmddjURL
       }).then(res => {
         return resolve(res)
       })

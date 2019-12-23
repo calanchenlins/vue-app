@@ -26,5 +26,16 @@ export default [
         }
       }
     }
+  },
+  {
+    url: '/ProcRoute/Save',
+    type: 'post',
+    response: config => {
+      return {
+        Code: 2000,
+        Message: '',
+        Data: '9861D57A-3464-60F0-3613-093D1217F3EF'
+      }
+    }
   }
 ]

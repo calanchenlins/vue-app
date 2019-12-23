@@ -1,15 +1,15 @@
 <template>
   <div id="app">
-    <work-flow-mgr />
+    hello Vue!
   </div>
 </template>
 
 <script>
-import WorkFlowMgr from '@app/packages/reports/re_procRoute/WorkFlowMgr'
 export default {
   name: 'App',
-  components: {
-    WorkFlowMgr
+  data() {
+    return {
+    }
   }
 }
 </script>

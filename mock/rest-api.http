@@ -6,5 +6,14 @@ GET  http://localhost:8080/mock/api/Catalog HTTP/1.1
 #Accept: text/html
 ###
 
+GET  http://localhost:8080/mock/api/Catalog/items HTTP/1.1
+###
+GET  http://localhost:8080/dev-api/api/Catalog/items HTTP/1.1
+###
+
+POST   http://localhost:8080/mock/ProcRoute/Save HTTP/1.1
+###
+POST  http://localhost:8080/dev-api/ProcRoute/Save HTTP/1.1
+###
 GET  http://localhost:8080/anyUrl HTTP/1.1
 Accept: text/html
