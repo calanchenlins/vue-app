@@ -1,9 +1,11 @@
 import Mock from 'mockjs'
 
 import procRoute from '../samples/workflowstudio/api/mock-api'
+import eshop from '../samples/eshop/api/mock-api'
 
 const mocks = [
-  ...procRoute
+  ...procRoute,
+  ...eshop
 ]
 
 // for mock server

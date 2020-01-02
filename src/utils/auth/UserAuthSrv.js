@@ -7,6 +7,8 @@ const config = {
   authority: 'http://localhost:6102',
   client_id: 'Swagger_UI',
   redirect_uri: window.location.origin + '/Callback', // VueRouter设置为history模式,或者提供单独的redirect_uri静态页面进行
+  // history模式下 host/x*/y*路由到host/x*/y*
+  // hash模式下 host/x*/y*永远路由到host/x/y/#/
   response_type: 'code',
   scope: 'openid profile orders offline_access', // 默认为openid
   post_logout_redirect_uri: window.location.origin + '/index.html',
